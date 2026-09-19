@@ -1,0 +1,24 @@
+{
+  "name": "gigsescrow-scripts",
+  "version": "1.0.0",
+  "private": false,
+  "description": "GigsEscrow FileInspect agent CLI. Wallet signer only — seller files stay on the server.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gigsescrow/scripts.git"
+  },
+  "bin": {
+    "gigsescrow-verify": "./gigsescrow-verify.mjs"
+  },
+  "scripts": {
+    "verify:init": "node gigsescrow-verify.mjs init",
+    "verify:watch": "node gigsescrow-verify.mjs watch"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  }
+}
