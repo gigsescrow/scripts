@@ -98,7 +98,6 @@ function loadConfig() {
     apiBase: (process.env.GIGSESCROW_API || file.apiBase || DEFAULT_API).replace(/\/$/, ""),
     chainIds,
     privateKey,
-    inspect: process.env.GIGSESCROW_INSPECT || file.inspect || "",
   };
 }
 
@@ -125,6 +124,7 @@ Env
   # Arc (Circle USDC faucet): export GIGSESCROW_CHAIN_ID=5042002
   # Robinhood: export GIGSESCROW_CHAIN_ID=46630
   # Or watch both (this repo): omit GIGSESCROW_CHAIN_ID
+  # Do not set GIGSESCROW_INSPECT — the API sends the live FileInspect address.
 
 Pay
   1% of the file listing. 0.5% to this wallet on submit. 0.5% protocol on pass.
@@ -177,7 +177,13 @@ function clientsFor(chainId, account) {
 
 async function tickChain(cfg, account, chainId) {
   const meta = await api(cfg.apiBase, `/api/inspect?chainId=${chainId}&status=REQUESTED`);
-  const inspect = (cfg.inspect || meta.inspect || "").toLowerCase();
+  const assigned = await api(
+    cfg.apiBase,
+    `/api/inspect/assigned?wallet=${account.address}&chainId=${chainId}`
+  );
+  const inspect = String(assigned.inspect || meta.inspect || "")
+    .trim()
+    .toLowerCase();
   if (!inspect || inspect === ZERO) {
     console.log(chainId, "skip (FileInspect not deployed)");
     return;
@@ -202,10 +208,6 @@ async function tickChain(cfg, account, chainId) {
     args: [account.address],
   });
   const now = Math.floor(Date.now() / 1000);
-  const assigned = await api(
-    cfg.apiBase,
-    `/api/inspect/assigned?wallet=${account.address}&chainId=${chainId}`
-  );
   const job = assigned.request;
 
   if (Number(cooldownUntil) > now && assigned.action === "accept") {
@@ -219,22 +221,30 @@ async function tickChain(cfg, account, chainId) {
     return;
   }
   if (assigned.action === "accept" && job?.id && job.requestId) {
-    console.log(chainId, "accept", job.id, job.listing?.title || "");
-    const txHash = await walletClient.writeContract({
-      address: inspect,
-      abi: fileInspectAbi,
-      functionName: "accept",
-      args: [job.requestId],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: txHash });
-    await api(cfg.apiBase, `/api/inspect/${job.id}/accept`, {
-      method: "POST",
-      body: JSON.stringify({ wallet: account.address, txHash }),
-    });
-    await api(cfg.apiBase, `/api/inspect/${job.id}/review`, {
-      method: "POST",
-      body: JSON.stringify({ wallet: account.address }),
-    }).catch((err) => console.log("review pending", err.message || err));
+    console.log(chainId, "accept", inspect, job.id, job.listing?.title || "");
+    try {
+      const txHash = await walletClient.writeContract({
+        address: inspect,
+        abi: fileInspectAbi,
+        functionName: "accept",
+        args: [job.requestId],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: txHash });
+      await api(cfg.apiBase, `/api/inspect/${job.id}/accept`, {
+        method: "POST",
+        body: JSON.stringify({ wallet: account.address, txHash }),
+      });
+      await api(cfg.apiBase, `/api/inspect/${job.id}/review`, {
+        method: "POST",
+        body: JSON.stringify({ wallet: account.address }),
+      }).catch((err) => console.log("review pending", err.message || err));
+    } catch (err) {
+      console.error(chainId, "accept failed", err.shortMessage || err.message || err);
+      await api(cfg.apiBase, `/api/inspect/${job.id}/release`, {
+        method: "POST",
+        body: JSON.stringify({ wallet: account.address }),
+      }).catch(() => {});
+    }
     return;
   }
   if (assigned.action === "submit" && job?.id && job.requestId && job.reportHash) {
