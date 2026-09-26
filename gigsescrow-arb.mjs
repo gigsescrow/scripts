@@ -3,8 +3,8 @@
  * Gig/job arbitration AI CLI. Signs submitScore only.
  * The server keeps inbox + uploads and calls this wallet's OpenRouter key.
  *
- *   node gigsescrow-arb.mjs init
- *   node gigsescrow-arb.mjs watch
+ *   node scripts/gigsescrow-arb.mjs init
+ *   node scripts/gigsescrow-arb.mjs watch
  *
  * Env: GIGSESCROW_PRIVATE_KEY, GIGSESCROW_API
  * Optional: GIGSESCROW_CHAIN_IDS=5042002,46630
@@ -30,7 +30,7 @@ const CHAINS = {
   46630: {
     name: "robinhood-testnet",
     nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-    rpcUrl: process.env.GIGSESCROW_RPC || "https://rpc.testnet.chain.robinhood.com",
+    rpcUrl: process.env.GIGSESCROW_RH_RPC || "https://rpc.testnet.chain.robinhood.com",
   },
   5042: {
     name: "arc-mainnet",
@@ -38,6 +38,20 @@ const CHAINS = {
     rpcUrl: process.env.GIGSESCROW_ARC_MAINNET_RPC || "https://rpc.mainnet.arc.io",
   },
 };
+
+const DEFAULT_ESCROW = {
+  5042002: process.env.NEXT_PUBLIC_ESCROW_ARB_ADDRESS || "0xdD0cc85D68D8fD7F85A61a6AD16aCaCb23e528bE",
+  46630:
+    process.env.NEXT_PUBLIC_ROBINHOOD_TESTNET_ESCROW_ARB_ADDRESS ||
+    "0x09F022faB4223E61c180987854F0C17C288b8B1a",
+};
+
+function resolveCaseEscrow(job, chainId) {
+  const fromCase = String(job?.escrow || "").trim();
+  if (/^0x[a-fA-F0-9]{40}$/.test(fromCase)) return fromCase;
+  const env = DEFAULT_ESCROW[chainId] || process.env.NEXT_PUBLIC_ESCROW_ARB_ADDRESS || "";
+  return /^0x[a-fA-F0-9]{40}$/.test(String(env).trim()) ? String(env).trim() : "";
+}
 
 const submitScoreAbi = [
   {
@@ -87,11 +101,14 @@ Gig/job arbitration agent (required CLI — harder than FileInspect)
 
   Register a wallet + OpenRouter key on the site. This watch loop is mandatory.
   Inbox and uploads stay on the server. Your LLM reads them there.
-  Thin evidence (empty inbox + no readable files) is capped at 2.0.
+  Thin evidence (empty inbox + no readable files) is capped at 2.0 (LLM path only).
   Never fetch Drive / X / email / the worker URI.
 
-  Clone the public CLI only: https://github.com/gigsescrow/scripts
-  Do not clone the marketplace source.
+  Submit score to the escrow on the assigned case (listing.escrowContract).
+  Old listings may still be v1; never rewrite that address. Always use the API escrow.
+  CLI poll is 15s. You drop from the online pool if heartbeat is older than 120s.
+
+  Clone the public CLI: https://github.com/gigsescrow/scripts
 
 Commands
   npm run arb:init
@@ -180,7 +197,12 @@ async function tickChain(cfg, account, chainId) {
     return;
   }
 
-  if (assigned.action === "submit" && job.orderBytes32 && job.escrow && job.llmScoreX10 != null) {
+  if (assigned.action === "submit" && job.orderBytes32 && job.llmScoreX10 != null) {
+    const escrow = resolveCaseEscrow(job, chainId);
+    if (!escrow) {
+      console.log(chainId, "submit skipped: no listing.escrowContract / env escrow");
+      return;
+    }
     const rpcUrl = job.rpcUrl || CHAINS[chainId]?.rpcUrl;
     const { publicClient, walletClient } = clientsFor(chainId, account, rpcUrl);
     const score = Number(job.llmScoreX10);
@@ -188,12 +210,13 @@ async function tickChain(cfg, account, chainId) {
       chainId,
       "SCORE",
       (score / 10).toFixed(1),
+      escrow,
       job.llmReason || "",
       job.llmSummary || "",
       job.listingTitle || ""
     );
     const txHash = await walletClient.writeContract({
-      address: job.escrow,
+      address: escrow,
       abi: submitScoreAbi,
       functionName: "submitScore",
       args: [job.orderBytes32, score],

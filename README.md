@@ -1,72 +1,50 @@
-# GigsEscrow agent CLI
+# GigsEscrow agent scripts
 
-Public CLI only. This is **not** the marketplace source.
-
-The watch loop is required. Do not sit on the website waiting for jobs.
-
-`GIGSESCROW_PRIVATE_KEY` is your **wallet private key** (the wallet you connected on gigsescrow.com). It is **not** the OpenRouter key. Never paste it on the website.
-
-MetaMask / Rabby usually show **64 hex characters without `0x`**. Put `0x` in front of those 64 characters, then `export` in the **same Terminal** as `verify:watch` or `arb:watch`. The CLI also accepts the 64 hex as-is and prepends `0x` for you.
-
-Files stay on GigsEscrow. HASH/OPEN (FileInspect) and inbox/uploads (arbitration) run on the server. Your OpenRouter model (saved on the job page) reads them there.
-
-Default watch covers **Arc testnet (5042002)** and **Robinhood testnet (46630)**. Arc is easier to faucet (Circle USDC).
-
-## FileInspect (`verify:*`)
-
-Pay is **1% of the file listing**: 0.5% to this wallet on every submit, 0.5% protocol fee on pass (seller refund on fail). Expire refunds the seller in full.
-
-1. On https://gigsescrow.com, open **Job for Agent - Approve File's Certificate**. Connect this wallet and paste your OpenRouter key.
-2. Keep a little native gas on that wallet (Arc USDC gas or Robinhood ETH).
-3. Install this CLI:
+Public install for a new user. This repo is the agent CLI and MCP only. It is not the marketplace source. `npm install` in an empty directory with no `package.json` walks up and installs something else.
 
 ```bash
 git clone https://github.com/gigsescrow/scripts.git
 cd scripts
 npm install
+node gigsescrow-mcp-local.mjs
 ```
+
+Cursor MCP `args` is the absolute path of `gigsescrow-mcp-local.mjs` after that clone. Wallet goes in that server's `env` as `GIGSESCROW_PRIVATE_KEY` (`0x` plus 64 hex characters). Skills: [skills/user.md](skills/user.md), [skills/inspect.md](skills/inspect.md), [skills/arbiter.md](skills/arbiter.md). The live copies are on https://gigsescrow.com/skills/user.md.
+
+Signing MCP tools: `catalog`, `listing`, `myOrders`, `myHires`, `getOrder`, `watchFunded`, `offer`, `apply`, `bookPreview`, `bookConfirm`, `deliver`, `verify`, `decrypt`. `offer` takes a job (no signature, no lock). `apply` is a campaign slot only. `bookPreview` then `bookConfirm` locks a gig. No release tool.
+
+Read-only MCP, no key: `node gigsescrow-mcp.mjs`. Tools: `catalog`, `listing`, `offers`, `inspectAssigned`, `arbAssigned`, `myOrders`, `getOrder`, `myHires`.
+
+Do not add write tools to `gigsescrow-mcp.mjs`. Posting a job is `POST /api/listings` with `origin=BUYER_JOB` — no signature, no lock, `ACTIVE` immediately. Lock is `hire.mjs hire`.
 
 ```bash
-# MetaMask/Rabby: 64 hex, no 0x. Put 0x in front of those 64 characters.
-export GIGSESCROW_PRIVATE_KEY=0xPASTE_64_HEX_FROM_METAMASK
-export GIGSESCROW_API=https://gigsescrow.com
-# Optional one chain: export GIGSESCROW_CHAIN_ID=5042002
+# Worker
+npm run gig:init && npm run gig:watch
+node gigsescrow-gig.mjs deliver --order <uuid> --uri <string>
+node gigsescrow-gig.mjs offer --listing <id> --price 1000000 --days 7 --message "scope"
+node gigsescrow-gig.mjs accept --order <uuid>
+node gigsescrow-gig.mjs apply --listing <id>
+node gigsescrow-gig.mjs list-file --file <path> --preview <img> --title "…" --description "…" --price <6dec>
+node gigsescrow-gig.mjs list-token --token 0x… --amount <int> --price <6dec> --title "…" --description "…" --lock
+node gigsescrow-gig.mjs lock-lot --listing <id>
+node gigsescrow-gig.mjs cancel-lot --listing <id>
+node gigsescrow-gig.mjs file-refund --order <uuid>
+
+# Hirer / buyer
+npm run hire:init && npm run hire:watch
+node gigsescrow-hire.mjs book --listing <id>
+node gigsescrow-hire.mjs hire --listing <id> --offer <id>
+node gigsescrow-hire.mjs release --order <uuid>
+node gigsescrow-hire.mjs refund --order <uuid>
+node gigsescrow-hire.mjs pay --listing <id>
+node gigsescrow-hire.mjs download --order <uuid>
+node gigsescrow-hire.mjs buy --listing <id>
+
+# Desks (not customer)
+node gigsescrow-verify.mjs watch
+node gigsescrow-arb.mjs watch
 ```
 
-```bash
-npm run verify:init
-npm run verify:watch
-```
+Skill: [skills/user.md](skills/user.md). Site: https://gigsescrow.com/skills/user.md and Guide Book § Agent CLI.
 
-Leave `verify:watch` running. The CLI heartbeats, accepts the assigned job, and submits the server LLM verdict.
-
-## Arbitration (`arb:*`)
-
-Harder than FileInspect: disputed gig/job, five axes, 0.0–10.0, Olympic panel of 5. Inbox + uploads stay on the server. Thin evidence is capped at 2.0. Pay is about **0.8%** of locked escrow after settle (one fifth of the 4% panel fee).
-
-1. On https://gigsescrow.com, join the **ARB_AI** stall. Connect this wallet and paste your OpenRouter key.
-2. Same clone / `npm install` as above.
-
-```bash
-export GIGSESCROW_PRIVATE_KEY=0xPASTE_64_HEX_FROM_METAMASK
-export GIGSESCROW_API=https://gigsescrow.com
-```
-
-```bash
-npm run arb:init
-npm run arb:watch
-```
-
-Leave `arb:watch` running. Heartbeat is required or you drop out of the online pool.
-
-### VPS
-
-```bash
-git clone https://github.com/gigsescrow/scripts.git
-cd scripts && npm install
-export GIGSESCROW_PRIVATE_KEY=0xPASTE_64_HEX_FROM_METAMASK
-export GIGSESCROW_API=https://gigsescrow.com
-npm run verify:watch
-# and/or:
-npm run arb:watch
-```
+Always `listing.escrowContract` or `order.payTo` from the API. Never hardcode escrow.

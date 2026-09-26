@@ -3,8 +3,8 @@
  * FileInspect agent CLI. Signs accept/submit only.
  * The server keeps the seller file and calls the agent's OpenRouter key.
  *
- *   node gigsescrow-verify.mjs init
- *   node gigsescrow-verify.mjs watch
+ *   node scripts/gigsescrow-verify.mjs init
+ *   node scripts/gigsescrow-verify.mjs watch
  *
  * Env: GIGSESCROW_PRIVATE_KEY, GIGSESCROW_API
  * Optional: GIGSESCROW_CHAIN_ID (one chain) or GIGSESCROW_CHAIN_IDS=5042002,46630
@@ -31,7 +31,7 @@ const CHAINS = {
   46630: {
     name: "robinhood-testnet",
     nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-    rpcUrl: process.env.GIGSESCROW_RPC || "https://rpc.testnet.chain.robinhood.com",
+    rpcUrl: process.env.GIGSESCROW_RH_RPC || "https://rpc.testnet.chain.robinhood.com",
   },
 };
 
@@ -90,10 +90,13 @@ function parseChainIds(raw, fallback) {
 function loadConfig() {
   const file = existsSync(CONFIG_PATH) ? JSON.parse(readFileSync(CONFIG_PATH, "utf8")) : {};
   const privateKey = normalizePrivateKey(process.env.GIGSESCROW_PRIVATE_KEY || file.privateKey || "");
-  const one = process.env.GIGSESCROW_CHAIN_ID || file.chainId;
-  const chainIds = one
-    ? parseChainIds(one, DEFAULT_CHAINS)
-    : parseChainIds(process.env.GIGSESCROW_CHAIN_IDS || file.chainIds, DEFAULT_CHAINS);
+  const envIds = process.env.GIGSESCROW_CHAIN_IDS;
+  const envOne = process.env.GIGSESCROW_CHAIN_ID;
+  const chainIds = envIds
+    ? parseChainIds(envIds, DEFAULT_CHAINS)
+    : envOne
+      ? parseChainIds(envOne, DEFAULT_CHAINS)
+      : parseChainIds(process.env.GIGSESCROW_CHAIN_IDS || file.chainIds, DEFAULT_CHAINS);
   return {
     apiBase: (process.env.GIGSESCROW_API || file.apiBase || DEFAULT_API).replace(/\/$/, ""),
     chainIds,
@@ -108,8 +111,7 @@ FileInspect agent (required CLI)
   The seller file stays on the server. Your LLM reads it there.
   HASH is checked on the stored bytes. The model compares contents to the listing.
 
-  Clone the public CLI only: https://github.com/gigsescrow/scripts
-  Do not clone the marketplace source.
+  Clone the public CLI: https://github.com/gigsescrow/scripts
 
 Commands
   npm run verify:init
@@ -121,9 +123,8 @@ Env
   # export in THIS Terminal, then npm run verify:watch
   export GIGSESCROW_PRIVATE_KEY=0xPASTE_64_HEX_FROM_METAMASK
   export GIGSESCROW_API=${DEFAULT_API}
-  # Arc (Circle USDC faucet): export GIGSESCROW_CHAIN_ID=5042002
-  # Robinhood: export GIGSESCROW_CHAIN_ID=46630
-  # Or watch both (this repo): omit GIGSESCROW_CHAIN_ID
+  # Arc (Circle USDC faucet) and Robinhood both: omit GIGSESCROW_CHAIN_ID
+  # One chain only: export GIGSESCROW_CHAIN_ID=5042002
   # Do not set GIGSESCROW_INSPECT — the API sends the live FileInspect address.
 
 Pay

@@ -1,27 +1,32 @@
 {
   "name": "gigsescrow-scripts",
-  "version": "1.1.0",
-  "private": false,
-  "description": "GigsEscrow FileInspect + arbitration agent CLI. Wallet signer only — files stay on the server.",
+  "version": "1.2.0",
+  "private": true,
+  "description": "GigsEscrow agent CLI and local MCP. The marketplace source is not in this repo.",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/gigsescrow/scripts.git"
   },
-  "bin": {
-    "gigsescrow-verify": "./gigsescrow-verify.mjs",
-    "gigsescrow-arb": "./gigsescrow-arb.mjs"
+  "engines": {
+    "node": ">=18.17.0"
   },
+  "type": "module",
   "scripts": {
+    "mcp": "node gigsescrow-mcp-local.mjs",
+    "mcp:readonly": "node gigsescrow-mcp.mjs",
+    "gig:init": "node gigsescrow-gig.mjs init",
+    "gig:watch": "node gigsescrow-gig.mjs watch",
+    "hire:init": "node gigsescrow-hire.mjs init",
+    "hire:watch": "node gigsescrow-hire.mjs watch",
     "verify:init": "node gigsescrow-verify.mjs init",
     "verify:watch": "node gigsescrow-verify.mjs watch",
     "arb:init": "node gigsescrow-arb.mjs init",
     "arb:watch": "node gigsescrow-arb.mjs watch"
   },
-  "engines": {
-    "node": ">=18.17.0"
-  },
   "dependencies": {
-    "viem": "^2.21.0"
+    "@noble/curves": "1.8.2",
+    "@noble/hashes": "1.2.0",
+    "viem": "2.56.5"
   }
 }
