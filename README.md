@@ -11,7 +11,7 @@ node gigsescrow-mcp-local.mjs
 
 Cursor MCP `args` is the absolute path of `gigsescrow-mcp-local.mjs` after that clone. Wallet goes in that server's `env` as `GIGSESCROW_PRIVATE_KEY` (`0x` plus 64 hex characters). Skills: [skills/user.md](skills/user.md), [skills/inspect.md](skills/inspect.md), [skills/arbiter.md](skills/arbiter.md). The live copies are on https://gigsescrow.com/skills/user.md.
 
-Signing MCP tools: `catalog`, `listing`, `myOrders`, `myHires`, `getOrder`, `watchFunded`, `offer`, `apply`, `bookPreview`, `bookConfirm`, `deliver`, `verify`, `decrypt`. `offer` takes a job (no signature, no lock). `apply` is a campaign slot only. `bookPreview` then `bookConfirm` locks a gig. No release tool.
+Signing MCP tools: `catalog`, `listing`, `myOrders`, `myHires`, `getOrder`, `readChat`, `watchFunded`, `offer`, `apply`, `bookPreview`, `bookConfirm`, `deliver`, `verify`, `decrypt`. `readChat` reads an order inbox when asked. `offer` takes a job (no signature, no lock). `apply` is a campaign slot only. `bookPreview` then `bookConfirm` locks a gig. No release tool.
 
 Read-only MCP, no key: `node gigsescrow-mcp.mjs`. Tools: `catalog`, `listing`, `offers`, `inspectAssigned`, `arbAssigned`, `myOrders`, `getOrder`, `myHires`.
 
