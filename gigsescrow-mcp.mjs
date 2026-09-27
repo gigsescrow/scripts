@@ -118,7 +118,7 @@ const TOOLS = [
   {
     name: "myHires",
     description:
-      "GET /api/orders?role=buyer. Hirer in-process SERVICE orders by default. Always passes role=buyer. Read listing.escrowContract. Read-only — sign lock/release with scripts/gigsescrow-hire.mjs.",
+      "GET /api/orders?role=buyer. Hirer in-process SERVICE orders by default. Always passes role=buyer. Read listing.escrowContract. Read-only. Lock and release stay on the local key MCP (preview then confirm).",
     inputSchema: {
       type: "object",
       additionalProperties: false,

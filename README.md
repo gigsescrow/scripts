@@ -11,11 +11,11 @@ node gigsescrow-mcp-local.mjs
 
 Cursor MCP `args` is the absolute path of `gigsescrow-mcp-local.mjs` after that clone. Wallet goes in that server's `env` as `GIGSESCROW_PRIVATE_KEY` (`0x` plus 64 hex characters). Skills: [skills/user.md](skills/user.md), [skills/inspect.md](skills/inspect.md), [skills/arbiter.md](skills/arbiter.md). The live copies are on https://gigsescrow.com/skills/user.md.
 
-Signing MCP tools: `catalog`, `listing`, `myOrders`, `myHires`, `getOrder`, `readChat`, `watchFunded`, `offer`, `apply`, `bookPreview`, `bookConfirm`, `deliver`, `verify`, `decrypt`. `readChat` reads an order inbox when asked. `offer` takes a job (no signature, no lock). `apply` is a campaign slot only. `bookPreview` then `bookConfirm` locks a gig. No release tool.
+Signing MCP tools: `catalog`, `listing`, `myOrders`, `myHires`, `getOrder`, `readChat`, `replyChat`, `sendChatFile`, `postJob`, `watchFunded`, `offer`, `apply`, `bookPreview`, `bookConfirm`, `hirePreview`, `hireConfirm`, `payFilePreview`, `payFileConfirm`, `buyTokenPreview`, `buyTokenConfirm`, `releasePreview`, `releaseConfirm`, `refundPreview`, `refundConfirm`, `download`, `deliver`, `verify`, `decrypt`. Fund moves are preview then confirm. `releaseConfirm` and `refundConfirm` always need the token. `offer` takes a job (no signature, no lock). `apply` is a campaign slot only. `bookPreview` then `bookConfirm` locks a gig. `postJob` does not lock.
 
 Read-only MCP, no key: `node gigsescrow-mcp.mjs`. Tools: `catalog`, `listing`, `offers`, `inspectAssigned`, `arbAssigned`, `myOrders`, `getOrder`, `myHires`.
 
-Do not add write tools to `gigsescrow-mcp.mjs`. Posting a job is `POST /api/listings` with `origin=BUYER_JOB` — no signature, no lock, `ACTIVE` immediately. Lock is `hire.mjs hire`.
+Do not add write tools to `gigsescrow-mcp.mjs`. The local MCP `postJob` posts `origin=BUYER_JOB` with no signature and no lock. Lock is `hirePreview` then `hireConfirm`, or `node gigsescrow-hire.mjs hire`.
 
 ```bash
 # Worker

@@ -52,7 +52,7 @@ Desk CLIs (other playbooks): npm run verify:watch (inspect.md), npm run arb:watc
 
 ## BUYER_JOB NEW (offer-then-lock)
 Post: POST /api/listings { title, description, priceUsdc, kind: SERVICE, origin: BUYER_JOB, payoutAddress, chainId, category, deliveryTimeoutSec }. No personal_sign. No createAndLock. Status is ACTIVE immediately. priceUsdc is the offer cap, not a locked amount. Omit previewKeys and nothing is signed. A cover image is the only signed step (upload session), and it is optional.
-There is no post-job CLI and no post-job MCP tool. Public MCP is GET only. Local MCP takes a job with offer (price, days, message; no signature, no lock). apply is a campaign slot only. It can book a gig and deliver. It does not post a job and it does not release.
+Public MCP is GET only. Local MCP (the user's own key) posts a job with postJob (no signature, no lock), takes one with offer, and books a gig. Fund moves are preview then confirm: book, hire, payFile, buyToken, release, refund. Show the preview and wait for yes. releaseConfirm and refundConfirm always need the token. readChat, replyChat, and sendChatFile do not move USDC. apply is a campaign slot only.
 Detect an open job from GET /api/listings/:id — not a guessed flag: origin is BUYER_JOB, listing.status is ACTIVE, and there is no funded on-chain lock (no jobOrder, or jobOrder.status is AWAITING_PAYMENT without a paid lock).
 Worker: POST /api/listings/:id/offers { wallet, priceUsdc, deliveryDays, message }. priceUsdc ≤ listing.priceUsdc (posted cap). deliveryDays 1–60. message ≤ 400 chars.
 Worker CLI: node gigsescrow-gig.mjs offer --listing <id> --price <6dec> --days <n> --message "…". Local MCP tool: offer. Then gig:watch for PAID deliver.
